@@ -1,0 +1,46 @@
+---
+- name: CIS 1.1.1 — Disable unused filesystems
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: absent
+  loop: [cramfs, freevxfs, hfs, udf]
+  tags: [cis, filesystem]
+
+- name: CIS 3.1.1 — Disable IP forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "0"
+    state: present
+    sysctl_set: true
+  tags: [cis, networking]
+
+- name: CIS 5.2.4 — Disable SSH root login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin no"
+  notify: restart sshd
+  tags: [cis, ssh]
+
+- name: CIS 5.2.5 — Set SSH MaxAuthTries
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?MaxAuthTries"
+    line: "MaxAuthTries 4"
+  notify: restart sshd
+  tags: [cis, ssh]
+
+- name: CIS 4.1.2 — Ensure auditd is enabled
+  ansible.builtin.service:
+    name: auditd
+    enabled: true
+    state: started
+  tags: [cis, audit]
+
+- name: CIS 6.1.3 — Ensure /etc/shadow permissions
+  ansible.builtin.file:
+    path: /etc/shadow
+    owner: root
+    group: root
+    mode: "0000"
+  tags: [cis, file-permissions]

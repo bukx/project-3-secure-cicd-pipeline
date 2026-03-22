@@ -1,0 +1,22 @@
+title = "gitleaks config"
+
+[allowlist]
+  paths = ["node_modules", ".git", "vendor", "*.test.js"]
+
+[[rules]]
+  id = "aws-access-key"
+  description = "AWS Access Key"
+  regex = '''AKIA[0-9A-Z]{16}'''
+  tags = ["key", "AWS"]
+
+[[rules]]
+  id = "generic-api-key"
+  description = "Generic API Key"
+  regex = '''(?i)(api[_-]?key|apikey)\s*[:=]\s*['\"][0-9a-zA-Z]{32,}'''
+  tags = ["key", "generic"]
+
+[[rules]]
+  id = "private-key"
+  description = "Private Key"
+  regex = '''-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----'''
+  tags = ["key", "private"]

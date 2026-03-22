@@ -1,0 +1,27 @@
+rules:
+  - id: no-hardcoded-secrets
+    patterns:
+      - pattern: |
+          $VAR = "..."
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: "(password|secret|api_key|token|private_key)"
+    message: "Possible hardcoded secret in variable '$VAR'. Use Vault or SSM instead."
+    languages: [javascript, typescript, python]
+    severity: ERROR
+
+  - id: no-eval
+    pattern: eval(...)
+    message: "eval() is a security risk. Use safer alternatives."
+    languages: [javascript, python]
+    severity: ERROR
+
+  - id: no-sql-injection
+    patterns:
+      - pattern: |
+          $QUERY = "..." + $INPUT
+      - pattern: |
+          $QUERY = f"...{$INPUT}..."
+    message: "Potential SQL injection. Use parameterized queries."
+    languages: [python, javascript]
+    severity: ERROR

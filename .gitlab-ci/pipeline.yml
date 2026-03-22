@@ -1,0 +1,56 @@
+stages: [build, security-scan, deploy, harden, report]
+
+build-app:
+  stage: build
+  image: docker:24-dind
+  script:
+    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA} -f docker/Dockerfile .
+    - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
+
+sast-semgrep:
+  stage: security-scan
+  image: returntocorp/semgrep:latest
+  script:
+    - semgrep scan --config=p/owasp-top-ten --config=p/nodejs --json --output=semgrep-results.json --error app/
+  artifacts: { paths: [semgrep-results.json], when: always }
+  allow_failure: false
+
+secrets-scan:
+  stage: security-scan
+  image: zricethezav/gitleaks:latest
+  script:
+    - gitleaks detect --source=. --config=security-tools/gitleaks/.gitleaks.toml --report-path=gitleaks-report.json --report-format=json
+  artifacts: { paths: [gitleaks-report.json], when: always }
+  allow_failure: false
+
+container-scan:
+  stage: security-scan
+  image: { name: aquasec/trivy:latest, entrypoint: [""] }
+  needs: [build-app]
+  script:
+    - trivy image --severity HIGH,CRITICAL --exit-code 1 --format json --output trivy-results.json ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
+  artifacts: { paths: [trivy-results.json], when: always }
+
+dast-zap:
+  stage: security-scan
+  image: ghcr.io/zaproxy/zaproxy:stable
+  script:
+    - zap-baseline.py -t http://staging-app:3000 -c security-tools/zap/zap-rules.conf -J zap-results.json -I
+  artifacts: { paths: [zap-results.json], when: always }
+
+deploy-production:
+  stage: deploy
+  needs: [sast-semgrep, secrets-scan, container-scan, dast-zap]
+  before_script:
+    - export VAULT_TOKEN=$(vault write -field=token auth/jwt/login role="ci-deploy" jwt="${CI_JOB_JWT_V2}")
+    - export DB_PASSWORD=$(vault kv get -field=password secret/prod/database)
+  script:
+    - aws ecs update-service --cluster prod-cluster --service demo-app --force-new-deployment
+  rules: [{ if: '$CI_COMMIT_BRANCH == "main"' }]
+
+compliance-report:
+  stage: report
+  needs: [sast-semgrep, secrets-scan, container-scan, dast-zap]
+  script:
+    - python scripts/generate-compliance-report.py --semgrep semgrep-results.json --gitleaks gitleaks-report.json --trivy trivy-results.json --zap zap-results.json --output compliance-reports/report-${CI_PIPELINE_ID}.html
+  artifacts: { paths: [compliance-reports/], expire_in: 90 days }

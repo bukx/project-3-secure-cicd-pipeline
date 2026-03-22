@@ -1,0 +1,11 @@
+# Trivy scanning policy
+severity:
+  - CRITICAL
+  - HIGH
+ignore:
+  unfixed: true
+vuln-type:
+  - os
+  - library
+format: json
+exit-code: 1
