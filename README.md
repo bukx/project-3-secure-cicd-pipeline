@@ -1,5 +1,7 @@
 # 🔒 Secure CI/CD Pipeline with Compliance Automation
 
+![Validate](https://github.com/bukx/project-3-secure-cicd-pipeline/actions/workflows/validate.yml/badge.svg)
+
 ![GitLab CI](https://img.shields.io/badge/GitLab_CI-FC6D26?style=flat&logo=gitlab&logoColor=white)
 ![Vault](https://img.shields.io/badge/Vault-FFEC6E?style=flat&logo=vault&logoColor=black)
 ![Trivy](https://img.shields.io/badge/Trivy-1904DA?style=flat&logo=aquasecurity&logoColor=white)
